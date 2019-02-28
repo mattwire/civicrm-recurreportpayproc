@@ -1,0 +1,25 @@
+<?xml version="1.0"?>
+<extension key="recurreportpayproc" type="module">
+  <file>recurreportpayproc</file>
+  <name>Recurring Contributions Report Payment Processor</name>
+  <description>Add payment_processor_id to the recurring contributions report</description>
+  <license>AGPL-3.0</license>
+  <maintainer>
+    <author>Matthew Wire (MJW Consulting)</author>
+    <email>mjw@mjwconsult.co.uk</email>
+  </maintainer>
+  <urls>
+    <url desc="Main Extension Page">https://github.com/mattwire/civicrm-recurreportpayproc</url>
+    <url desc="Support">https://www.mjwconsult.co.uk</url>
+    <url desc="Licensing">http://www.gnu.org/licenses/agpl-3.0.html</url>
+  </urls>
+  <releaseDate>2019-02-28</releaseDate>
+  <version>0.1</version>
+  <develStage>alpha</develStage>
+  <compatibility>
+    <ver>5.10.3</ver>
+  </compatibility>
+  <civix>
+    <namespace>CRM/Recurreportpayproc</namespace>
+  </civix>
+</extension>

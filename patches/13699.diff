@@ -1,0 +1,101 @@
+diff --git a/CRM/Contribute/BAO/ContributionRecur.php b/CRM/Contribute/BAO/ContributionRecur.php
+index 126cf8f67d9..813bccb168f 100644
+--- a/CRM/Contribute/BAO/ContributionRecur.php
++++ b/CRM/Contribute/BAO/ContributionRecur.php
+@@ -801,14 +801,7 @@ public static function recurringContribution(&$form) {
+     $form->addElement('text', 'contribution_recur_processor_id', ts('Processor ID'), CRM_Core_DAO::getAttribute('CRM_Contribute_DAO_ContributionRecur', 'processor_id'));
+     $form->addElement('text', 'contribution_recur_trxn_id', ts('Transaction ID'), CRM_Core_DAO::getAttribute('CRM_Contribute_DAO_ContributionRecur', 'trxn_id'));
+ 
+-    $paymentProcessorParams = [
+-      'return' => ["id", "name", 'is_test'],
+-    ];
+-    $paymentProcessors = civicrm_api3('PaymentProcessor', 'get', $paymentProcessorParams);
+-    $paymentProcessorOpts = [];
+-    foreach ($paymentProcessors['values'] as $key => $value) {
+-      $paymentProcessorOpts[$key] = $value['name'] . ($value['is_test'] ? ' (Test)' : '');
+-    }
++    $paymentProcessorOpts = CRM_Contribute_BAO_ContributionRecur::buildOptions('payment_processor_id', 'get');
+     $form->add('select', 'contribution_recur_payment_processor_id', ts('Payment Processor ID'), $paymentProcessorOpts, FALSE, ['class' => 'crm-select2', 'multiple' => 'multiple']);
+ 
+     CRM_Core_BAO_Query::addCustomFormFields($form, array('ContributionRecur'));
+@@ -972,4 +965,41 @@ public static function getInactiveStatuses() {
+     return self::$inactiveStatuses;
+   }
+ 
++  /**
++   * Get options for the called BAO object's field.
++   *
++   * This function can be overridden by each BAO to add more logic related to context.
++   * The overriding function will generally call the lower-level CRM_Core_PseudoConstant::get
++   *
++   * @param string $fieldName
++   * @param string $context
++   * @see CRM_Core_DAO::buildOptionsContext
++   * @param array $props
++   *   whatever is known about this bao object.
++   *
++   * @return array|bool
++   */
++  public static function buildOptions($fieldName, $context = NULL, $props = array()) {
++
++    switch ($fieldName) {
++      case 'payment_processor_id':
++        if (isset(\Civi::$statics[__CLASS__]['buildoptions_payment_processor_id'])) {
++          return \Civi::$statics[__CLASS__]['buildoptions_payment_processor_id'];
++        }
++        $baoName = 'CRM_Contribute_BAO_ContributionRecur';
++        $props['condition']['test'] = "is_test = 0";
++        $liveProcessors = CRM_Core_PseudoConstant::get($baoName, $fieldName, $props, $context);
++        $props['condition']['test'] = "is_test != 0";
++        $testProcessors = CRM_Core_PseudoConstant::get($baoName, $fieldName, $props, $context);
++        foreach ($testProcessors as $key => $value) {
++          $testProcessors[$key] = $value . ts(' (test)');
++        }
++        $allProcessors = $liveProcessors + $testProcessors;
++        ksort($allProcessors);
++        \Civi::$statics[__CLASS__]['buildoptions_payment_processor_id'] = $allProcessors;
++        return $allProcessors;
++    }
++    return parent::buildOptions($fieldName, $context, $props);
++  }
++
+ }
+diff --git a/CRM/Report/Form/Contribute/Recur.php b/CRM/Report/Form/Contribute/Recur.php
+index 8e966772f2e..7d1f6309c56 100644
+--- a/CRM/Report/Form/Contribute/Recur.php
++++ b/CRM/Report/Form/Contribute/Recur.php
+@@ -179,6 +179,9 @@ public function __construct() {
+           'failure_retry_date' => array(
+             'title' => ts('Failure Retry Date'),
+           ),
++          'payment_processor_id' => array(
++            'title' => ts('Payment Processor'),
++          ),
+         ),
+         'filters' => array(
+           'contribution_status_id' => array(
+@@ -245,6 +248,13 @@ public function __construct() {
+             'operatorType' => CRM_Report_Form::OP_DATE,
+             'pseudofield' => TRUE,
+           ),
++          'payment_processor_id' => array(
++            'title' => ts('Payment Processor'),
++            'operatorType' => CRM_Report_Form::OP_MULTISELECT,
++            'options' => CRM_Contribute_BAO_ContributionRecur::buildOptions('payment_processor_id', 'get'),
++            'default' => NULL,
++            'type' => CRM_Utils_Type::T_INT,
++          ),
+         ),
+       ),
+     );
+@@ -390,6 +400,10 @@ public function alterDisplay(&$rows) {
+       if (!empty($row['civicrm_financial_trxn_card_type_id'])) {
+         $rows[$rowNum]['civicrm_financial_trxn_card_type_id'] = $this->getLabels($row['civicrm_financial_trxn_card_type_id'], 'CRM_Financial_DAO_FinancialTrxn', 'card_type_id');
+       }
++
++      if (!empty($row['civicrm_contribution_recur_payment_processor_id'])) {
++        $rows[$rowNum]['civicrm_contribution_recur_payment_processor_id'] = $this->getLabels($row['civicrm_contribution_recur_payment_processor_id'], 'CRM_Contribute_BAO_ContributionRecur', 'payment_processor_id');
++      }
+     }
+   }
+ 
